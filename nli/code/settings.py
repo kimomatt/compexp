@@ -1,10 +1,10 @@
 """
 Settings
 """
-
+import multiprocessing
 import os
 
-CUDA = True
+CUDA = False
 ALPHA = None  # Use "None" to use ReLU threshold (i.e., > 0)
 BEAM_SIZE = 10
 MAX_FORMULA_LENGTH = 5
@@ -15,10 +15,10 @@ DEBUG = False
 # Choices: iou, precision, recall
 METRIC = "iou"
 
-EMBEDDING_NEIGHBORHOOD_SIZE = 5
+EMBEDDING_NEIGHBORHOOD_SIZE = 0
 
-NEURONS = None
-PARALLEL = 4
+NEURONS = [0, 1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256, 328, 350, 400]
+PARALLEL = max(1, multiprocessing.cpu_count()-1)
 
 SHUFFLE = False
 SAVE_EVERY = 4
@@ -26,9 +26,9 @@ SAVE_EVERY = 4
 # How many "maximally activating" open features to use, PER CATEGORY
 MAX_OPEN_FEATS = 5
 # Minimum number of activations to analyze a neuron
-MIN_ACTS = 500
+MIN_ACTS = 20
 
-MODEL = "models/bowman_snli/6.pth"
+MODEL = "models/bowman_snli/model_best_legacy.pth"
 MODEL_TYPE = "bowman"  # choices: bowman, minimal
 RANDOM_WEIGHTS = False  # Initialize weights randomly (equivalent to an untrained model)
 N_SENTENCE_FEATS = 2000  # how many of the most common sentence lemmas to keep

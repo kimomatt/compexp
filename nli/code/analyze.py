@@ -425,7 +425,16 @@ def extract_features(
     all_feats = []
     all_multifeats = []
     all_idxs = []
-    for src, src_feats, src_multifeats, src_lengths, idx in tqdm(loader):
+    for batch_i, (src, src_feats, src_multifeats, src_lengths, idx) in enumerate(tqdm(loader)):
+        if batch_i == 0:
+            print("DEBUG batch 0")
+            print("  src shape:", tuple(src.shape))
+            print("  src_feats shape:", tuple(src_feats.shape))
+            print("  src_feats numel:", src_feats.numel())
+            print("  src_multifeats shape:", tuple(src_multifeats.shape))
+            print("  src_multifeats numel:", src_multifeats.numel())
+            print("  src_lengths shape:", tuple(src_lengths.shape))
+            print("  idx shape:", tuple(idx.shape))
         #  words = dataset.to_text(src)
         if settings.CUDA:
             src = src.cuda()
@@ -703,6 +712,18 @@ def main():
         cuda=settings.CUDA,
     )
 
+    print("HAS fstoi:", hasattr(dataset, "fstoi"))
+    print("HAS multifstoi:", hasattr(dataset, "multifstoi"))
+
+    if hasattr(dataset, "fstoi"):
+        print("len(dataset.fstoi):", len(dataset.fstoi))
+        print("fstoi keys sample:", list(dataset.fstoi.keys())[:10])
+
+    if hasattr(dataset, "multifstoi"):
+        print("len(dataset.multifstoi):", len(dataset.multifstoi))
+        print("multifstoi keys sample:", list(dataset.multifstoi.keys())[:10])
+
+
     # Last model weight
     if settings.MODEL_TYPE == "minimal":
         weights = model.mlp.weight.t().detach().cpu().numpy()
@@ -715,42 +736,46 @@ def main():
         dataset,
     )
 
+
+
     print("Computing quantiles")
+
+    print("Loading LLM penultimate-layer activations from .npz")
+    llm_npz = np.load("snli_distilroberta_penultimate_sentence_activations.npz")
+    states = llm_npz["activations"]
+    
     acts = quantile_features(states)
 
     print("Extracting sentence token features")
     tok_feats, tok_feats_vocab = to_sentence(toks, feats, dataset)
-    print("Mask search")
+
+    print("Running mask search (compositional explanations)")
+    D = states.shape[1]
+    weights = np.zeros((D, 3), dtype=np.float32)  # dummy
     records = search_feats(acts, states, (tok_feats, tok_feats_vocab), weights, dataset)
 
-    print("Mask search")
-    records = search_feats(acts, states, feats, weights, dataset)
+    import pandas as pd
 
-    print("Load predictions")
-    mbase = os.path.splitext(os.path.basename(settings.MODEL))[0]
-    dbase = os.path.splitext(os.path.basename(settings.DATA))[0]
-    predf = f"data/analysis/preds/{mbase}_{dbase}.csv"
-    # Add the feature activations so we can do correlation
-    preds = pd.read_csv(predf)
+    N = len(toks)
+    preds = pd.DataFrame({
+        "gt": ["unknown"] * N,
+        "pred": ["unknown"] * N,
+    })
 
-    save_with_acts(preds, acts, os.path.join(settings.RESULT, "preds_acts.csv"))
-
-    print("Visualizing features")
+    print("Writing HTML report")
     from vis import sentence_report
-
     sentence_report.make_html(
         records,
-        # Features
         toks,
         states,
         (tok_feats, tok_feats_vocab),
         idxs,
         preds,
-        # General stuff
         weights,
         dataset,
         settings.RESULT,
     )
+
 
 
 if __name__ == "__main__":
