@@ -18,10 +18,10 @@ METRIC = "iou"
 EMBEDDING_NEIGHBORHOOD_SIZE = 0
 
 NEURONS = [0, 1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 256, 328, 350, 400]
-PARALLEL = max(1, multiprocessing.cpu_count()-1)
+PARALLEL = 0
 
 SHUFFLE = False
-SAVE_EVERY = 4
+SAVE_EVERY = 1
 
 # How many "maximally activating" open features to use, PER CATEGORY
 MAX_OPEN_FEATS = 5
